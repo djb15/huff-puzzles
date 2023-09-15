@@ -21,6 +21,8 @@ contract Add1Test is Test, NonMatchingSelectorHelper {
         assertEq(add1.add1(41), 42, "Add1(41) expected to return 42");
         assertEq(add1.add1(23), 24, "Add1(23) expected to return 24");
         assertEq(add1.add1(0), 1, "Add1(0) expected to return 1");
+        vm.expectRevert();
+        add1.add1(type(uint256).max);
     }
 
     /// @notice Test that a non-matching selector reverts

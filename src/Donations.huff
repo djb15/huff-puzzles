@@ -7,6 +7,40 @@
 
 #define function donated(address) payable returns(uint256)
 
+#define constant DONATIONS = FREE_STORAGE_POINTER() // We know that this is slot 0
+
 #define macro MAIN() = takes(0) returns(0) {
-    
+    0x00 calldataload 0xe0 shr
+    __FUNC_SIG(donated) eq donated jumpi
+    callvalue // [value]
+    dup1 // [value, value]
+    iszero earlyreturn jumpi // Return early if value is 0
+    caller // [address, value]
+    0x00 // [0, address, value]
+    mstore // [value]
+    0x40 // [64, value]
+    0x00 // [0, 64, value]
+    sha3 // [hash, value]
+    swap1 // [value, hash]
+    dup2 // [hash, value, hash]
+    sload // [value, value, hash]
+    add // [value, hash]
+    swap1 // [hash, value]
+    sstore
+    0x00 0x00 return
+
+    donated:
+        0x04 calldataload // [address]
+        0x00 // [0, address]
+        mstore
+        0x40 // [64]
+        0x00 // [0, 64]
+        sha3 // [hash]
+        sload // [value]
+        0x00 // [0, value]
+        mstore // []
+        0x20 0x00 return
+
+    earlyreturn:
+        0x00 0x00 return
 }

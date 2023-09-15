@@ -12,7 +12,50 @@
 
  #define function distribute(address[]) payable returns()
 
-
+// Note this has no protection for reentry and doesn't handle call failures
  #define macro MAIN() = takes(0) returns(0) {
+    0x00 calldataload 0xe0 shr
+    __FUNC_SIG(distribute) eq distribute jumpi
+    0x00 0x00 revert
+
+    distribute:
+        0x24 calldataload // [len]
+        dup1 // [len, len]
+        iszero // [iszero, len]
+        earlyrevert jumpi // [len]
+        dup1 // [len, len]
+        callvalue // [value, len, len]
+        dup1 // [value, value, len, len]
+        iszero // [iszero, value, len, len]
+        earlyrevert jumpi // [value, len, len]
+        div // [share, len]
+
+    distributeInner:
+        dup2 // [len, share, len]
+        iszero // [iszero, share, len]
+        earlyreturn jumpi // [share, len]
+        0x00 0x00 0x00 0x00 // [0, 0, 0, 0, share, len]
+        dup5 // [share, 0, 0, 0, 0, share, len]
+        dup7 // [len, share, 0, 0, 0, 0, share, len]
+        0x20 // [32, len, share, 0, 0, 0, 0, share, len]
+        mul // [arryoffset, share, 0, 0, 0, 0, share, len]
+        0x24 // [baseoffset, arryoffset, share, 0, 0, 0, 0, share, len]
+        add // [offset, share, 0, 0, 0, 0, share, len]
+        calldataload // [address, share, 0, 0, 0, 0, share, len]
+        0x61a8 // [25000 gas, address, share, 0, 0, 0, 0, share, len]
+        call // [success, share, len]
+        pop // [share, len] assume success
+        swap1 // [len, share]
+        0x01 // [1, len, share]
+        swap1 // [len, 1, share]
+        sub // [len, share]
+        swap1 // [share, len]
+        distributeInner jump
+
+    earlyrevert:
+        0x00 0x00 revert
+
+    earlyreturn:
+        0x00 0x00 return
    
  }

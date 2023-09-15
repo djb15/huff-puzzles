@@ -13,5 +13,9 @@
 
 
 #define macro MAIN() = takes(0) returns(0) {
-    
+    0x20 0x00 mstore
+    0x94f6e6c792048756666 // Length of 9 concatenated with "Only Huff" string in bytes
+    0x29 mstore // Offset by 29 bytes
+
+    0x60 0x00 revert // Return all 60 bytes
 }

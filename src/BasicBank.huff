@@ -11,6 +11,70 @@
 #define function balanceOf(address) payable returns(uint256)
 #define function withdraw(uint256) payable returns()
 
-#define macro MAIN() = takes(0) returns(0) {
+#define constant BALANCE = FREE_STORAGE_POINTER() // We know that this is at slot 0
 
+#define macro MAIN() = takes(0) returns(0) {
+    0x00 calldataload 0xe0 shr
+    dup1 __FUNC_SIG(balanceOf) eq balanceOf jumpi
+    __FUNC_SIG(withdraw) eq withdraw jumpi
+
+    callvalue // [value]
+    dup1 // [value, value]
+    iszero // [iszero, value]
+    earlyreturn jumpi // [value]
+    caller // [address, value]
+    0x00 // [0, address, value]
+    mstore // [value]
+    0x40 // [64, value]
+    0x00 // [0, 64, value]
+    sha3 // [hash, value]
+    swap1 // [value, hash]
+    dup2 // [hash, value, hash]
+    sload // [oldvalue, newvalue, hash]
+    add // [value, hash]
+    swap1 // [hash, value]
+    sstore
+
+    earlyreturn:
+        0x00 0x00 return
+
+    earlyrevert:
+        0x00 0x00 revert
+
+    balanceOf:
+        0x04 calldataload // [address]
+        0x00 mstore
+        0x40
+        0x00 // [0, 64]
+        sha3 // [hash]
+        sload // [value]
+        0x00 // [0, value]
+        mstore // []
+        0x20 0x00 return
+
+    withdraw:
+        0x04 calldataload // [value]
+        caller // [address, value]
+        0x00 mstore // [value]
+        0x40 0x00 // [0, 64, value]
+        sha3 // [hash, value]
+        dup2 // [value, hash, value]
+        dup2 // [hash, value, hash, value]
+        sload // [value, subvalue, hash, subvalue]
+        dup1 // [value, value, subvalue, hash, subvalue]
+        dup3 // [subvalue, value value, subvalue, hash, subvalue]
+        gt // [gt, value, subvalue, hash, subvalue]
+        earlyrevert jumpi
+        sub // [newvalue, hash, subvalue]
+        swap1 // [hash, newvalue, subvalue]
+        sstore // [subvalue]
+        0x00
+        0x00
+        0x00
+        0x00 // [0, 0, 0, 0, subvalue]
+        swap4 // [subvalue, 0, 0, 0, 0]
+        caller // [address, subvalue, 0, 0, 0, 0]
+        gas
+        call
+        0x00 0x00 return
 }

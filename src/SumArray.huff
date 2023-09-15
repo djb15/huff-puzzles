@@ -10,7 +10,46 @@
 
 #define function sumArray(uint256[]) payable returns(uint256)
 
-
+// For sumArray input data would look like OFFSET:LENGTH:VALUE1-VALUEX
 #define macro MAIN() = takes(0) returns(0) {
+    0x00 calldataload 0xe0 shr
+    __FUNC_SIG(sumArray) eq sumArray jumpi
+    
+    earlyrevert:
+        0x00 0x00 revert
 
+    sumArray:
+        0x00 // [sum]
+        0x24 calldataload // [len, sum] Since we know the offset is definitely 32 bytes
+
+    sumArrayInner:
+        dup1 // [len, len, sum]
+        iszero // [iszero, len, sum]
+        done jumpi
+        dup1
+        0x20 // [32, len, len, sum]
+        mul // [offset, len, sum]
+        0x24 // [base offset, offset, len, sum]
+        add // [actual_offset, len, sum]
+        calldataload // [inputval, len, sum]
+        swap1 // [len, inputval, sum]
+        swap2 // [sum, inputval, len]
+        dup1 // [sum, sum, inputval, len]
+        swap2 // [inputval, sum, sum, len]
+        add // [sum, oldsum, len]
+        swap1 // [oldsum, sum, len]
+        dup2 // [sum, oldsum, sum, len]
+        lt // [lt, sum, len]
+        earlyrevert jumpi // [sum, len]
+        swap1 // [len, sum]
+        0x01 // [1, len, sum]
+        swap1 // [len, 1, sum]
+        sub // [len, sum]
+        sumArrayInner jump
+
+    done:
+        pop // [sum]
+        0x00 mstore
+
+        0x20 0x00 return
 }

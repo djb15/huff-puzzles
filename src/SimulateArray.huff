@@ -24,6 +24,85 @@
  #define error OutOfBounds()
  #define error ZeroArray()
 
+ #define constant ARRAY = FREE_STORAGE_POINTER() // We know this is slot 0
+
  #define macro MAIN() = takes(0) returns(0) {
-    
+    0x00 calldataload 0xe0 shr
+    dup1 __FUNC_SIG(pushh) eq pushh jumpi
+    dup1 __FUNC_SIG(popp) eq popp jumpi
+    dup1 __FUNC_SIG(read) eq read jumpi
+    dup1 __FUNC_SIG(length) eq length jumpi
+    __FUNC_SIG(write) eq write jumpi
+    0x00 0x00 revert
+
+    pushh:
+        // Update the length of the array
+        [ARRAY] sload // [len]
+        dup1 // [len, len]
+        0x01 add // [newlen, len]
+        [ARRAY] sstore // [len]
+        0x20 0x00 sha3 // [hash, len]
+        add // [pointer]
+        0x04 calldataload // [value, pointer]
+        swap1 // [pointer, value]
+        sstore
+        0x00 0x00 return
+
+    popp:
+        [ARRAY] sload // [len]
+        dup1 // [len, len]
+        iszero // [iszero, len]
+        earlyrevert jumpi // [len]
+        0x01 // [1, len]
+        swap1 // [len, 1]
+        sub // [index]
+        dup1 // [index, index]
+        [ARRAY] sstore // [index]
+        0x20 0x00 sha3 // [hash, index]
+        add // [slot]
+        sload // [value]
+        0x00 mstore
+        0x20 0x00 return
+
+    read:
+        CHECK_INDEX(readsuccess) // [index]
+
+    readsuccess:
+        0x20 0x00 sha3 // [base, index]
+        add // [index]
+        sload // [value]
+        0x00 mstore
+        0x20 0x00 return
+
+
+    length:
+        [ARRAY] sload
+        0x00 mstore
+        0x20 0x00 return
+
+    write:
+        CHECK_INDEX(writesuccess) // [index]
+
+    writesuccess:
+        0x20 0x00 sha3 // [base, index]
+        add // [index]
+        0x24 calldataload // [value, index]
+        swap1 // [index, value]
+        sstore
+        0x00 0x00 return
+
+    earlyrevert:
+        __ERROR(ZeroArray)
+        0x00 mstore
+        0x04 0x00 revert
  }
+
+#define macro CHECK_INDEX(jumpdestination) = takes(0) returns(1) {
+    0x04 calldataload // [index]
+    dup1 // [index, index]
+    [ARRAY] sload // [len, index, index]
+    gt <jumpdestination> jumpi // [index]
+    __ERROR(OutOfBounds)
+    0x00 mstore
+    0x04 0x00 revert
+}

@@ -36,6 +36,10 @@ contract SumArrayTest is Test, NonMatchingSelectorHelper {
         uint256[] memory arr2 = new uint256[](0);
         uint256 x2 = sumArray.sumArray(arr2);
         assertEq(x2, 0, "expected empty array to return 0");
+
+        arr[3] = type(uint256).max;
+        vm.expectRevert();
+        sumArray.sumArray(arr);
     }
 
     /// @notice Test that a non-matching selector reverts
